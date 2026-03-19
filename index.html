@@ -1,741 +1,502 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Activity, Droplet, Wind, Info, AlertTriangle, Gamepad2, Timer, Play, Trophy } from 'lucide-react';
-
-// --- COMPONENTES VISUALES ---
-
-// 1. Simulación del Efecto del Radio (Poiseuille)
-const PoiseuilleSimulation = () => {
-  const [radius, setRadius] = useState(5); // Escala del 1 al 10
-
-  // Cálculos basados en la física real (simplificados para educación)
-  // Resistencia es inversamente proporcional a la cuarta potencia del radio (r^4)
-  const normalizedRadius = radius / 5; // Normalizado donde 5 es el radio "normal" (1.0)
-  const resistance = Math.pow(1 / Math.max(0.1, normalizedRadius), 4);
-  const flowScale = 100 / resistance; // Flujo teórico si la presión fuera constante
-
-  return (
-    <div className="flex flex-col md:flex-row gap-6">
-      <div className="flex-1 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-        <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
-          <Droplet className="text-red-500" /> 1. El poder del Radio (Resistencia)
-        </h3>
-        <p className="text-slate-600 mb-6 text-sm">
-          Según la <strong>Ley de Poiseuille</strong>, la resistencia al paso de la sangre depende enormemente del tamaño de la arteria. Si el radio disminuye a la mitad, ¡la resistencia aumenta 16 veces!
-        </p>
-
-        <div className="mb-8">
-          <label className="block text-sm font-medium text-slate-700 mb-2">
-            Tamaño de la arteria (Radio): <span className="text-red-600 font-bold">{radius} mm</span>
-          </label>
-          <input
-            type="range"
-            min="1"
-            max="10"
-            step="0.5"
-            value={radius}
-            onChange={(e) => setRadius(parseFloat(e.target.value))}
-            className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-red-600"
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div className="bg-red-50 p-4 rounded-lg border border-red-100">
-            <span className="block text-xs text-red-800 font-semibold mb-1">RESISTENCIA AL FLUJO</span>
-            <span className="text-2xl font-black text-red-600">
-              {resistance > 100 ? '> 100x' : `${resistance.toFixed(1)}x`}
-            </span>
-          </div>
-          <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
-            <span className="block text-xs text-blue-800 font-semibold mb-1">FLUJO RESULTANTE</span>
-            <span className="text-2xl font-black text-blue-600">
-              {flowScale.toFixed(1)} %
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex-1 bg-slate-50 p-6 rounded-xl shadow-inner flex flex-col justify-center items-center overflow-hidden relative min-h-[250px] border border-slate-200">
-        <span className="absolute top-2 left-2 text-xs font-bold text-slate-400">VISTA TRANSVERSAL</span>
-        {/* Visualización de la arteria y la sangre */}
-        <div 
-          className="bg-red-100 rounded-full flex items-center justify-center border-4 border-red-300 transition-all duration-300 relative shadow-inner"
-          style={{ width: `${radius * 20}px`, height: `${radius * 20}px` }}
-        >
-          {/* Glóbulos rojos esquemáticos */}
-          <div className="w-2/3 h-2/3 bg-red-500 rounded-full opacity-50 animate-pulse"></div>
-        </div>
-        
-        {radius <= 2 && (
-          <div className="absolute bottom-4 bg-orange-100 text-orange-800 px-3 py-2 rounded-lg text-sm flex items-center gap-2 border border-orange-200 animate-bounce">
-            <AlertTriangle size={16} /> ¡Peligro! Arteria ocluida, isquemia distal.
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-// 2. Simulación de Continuidad (Estenosis)
-const ContinuitySimulation = () => {
-  const [stenosis, setStenosis] = useState(0); // Porcentaje de estenosis 0-90%
-  const containerRef = useRef(null);
-
-  // Cálculos
-  // Área normal vs Área con estenosis
-  const areaScale = (100 - stenosis) / 100;
-  // Ecuación de continuidad: v1*A1 = v2*A2 -> v2 = (v1*A1)/A2. Asumimos v1 = 1
-  const velocityMultiplier = 1 / Math.max(0.1, areaScale);
-
-  return (
-    <div className="flex flex-col gap-6">
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-        <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
-          <Wind className="text-blue-500" /> 2. Estenosis y Ecuación de Continuidad
-        </h3>
-        <p className="text-slate-600 mb-6 text-sm">
-          Como el mismo volumen de sangre debe pasar por el tubo sin importar su tamaño (<strong>Ecuación de Continuidad</strong>), cuando hay una estrechez (estenosis), la sangre se ve obligada a <strong>aumentar su velocidad</strong> drásticamente para lograr pasar.
-        </p>
-
-        <div className="mb-8">
-          <label className="block text-sm font-medium text-slate-700 mb-2">
-            Grado de Estenosis (Placa de Ateroma): <span className="text-blue-600 font-bold">{stenosis}%</span>
-          </label>
-          <input
-            type="range"
-            min="0"
-            max="90"
-            step="1"
-            value={stenosis}
-            onChange={(e) => setStenosis(parseInt(e.target.value))}
-            className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-          />
-        </div>
-
-        <div className="flex flex-col md:flex-row gap-4 mb-4">
-          <div className="flex-1 bg-slate-50 p-4 rounded-lg border border-slate-200 flex items-center justify-between">
-            <span className="text-sm text-slate-600">Velocidad Pre-Estenosis:</span>
-            <span className="text-lg font-bold text-slate-800">1.0 m/s</span>
-          </div>
-          <div className="flex-1 bg-blue-50 p-4 rounded-lg border border-blue-200 flex items-center justify-between">
-            <span className="text-sm text-blue-800 font-semibold">Velocidad en la Estenosis:</span>
-            <span className="text-2xl font-black text-blue-600">{velocityMultiplier.toFixed(1)} m/s</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Visualizador Animado de la Arteria Longitudinal */}
-      <div className="bg-slate-900 p-8 rounded-xl overflow-hidden relative h-64 shadow-inner" ref={containerRef}>
-        <span className="absolute top-2 left-2 text-xs font-bold text-slate-400 z-10">VISTA LONGITUDINAL</span>
-        
-        {/* Contenedor de la arteria */}
-        <div className="absolute top-1/2 left-0 w-full transform -translate-y-1/2 h-32 flex items-center">
-          
-          {/* Pared superior de la arteria */}
-          <div 
-            className="absolute top-0 w-full h-4 bg-red-400 transition-all duration-300 z-10"
-            style={{ 
-              clipPath: `polygon(0% 0%, 100% 0%, 100% 100%, 60% 100%, 50% ${stenosis}%, 40% 100%, 0% 100%)` 
-            }}
-          ></div>
-
-          {/* Placa de ateroma (visual inferior) */}
-          <div 
-            className="absolute bottom-0 w-full h-full bg-yellow-300 transition-all duration-300 z-10 opacity-80"
-            style={{ 
-              clipPath: `polygon(40% 100%, 50% ${100 - stenosis}%, 60% 100%)` 
-            }}
-          ></div>
-          
-          {/* Pared inferior de la arteria */}
-          <div className="absolute bottom-0 w-full h-4 bg-red-400 z-10"></div>
-
-          {/* Flujo de sangre (partículas) */}
-          <div className="w-full h-full relative z-0 flex items-center">
-             {/* Partículas animadas mediante CSS. La velocidad de la animación depende de velocityMultiplier */}
-             <div className="w-full h-16 relative overflow-hidden flex">
-                {/* Generamos "ondas" de sangre moviéndose */}
-                <div 
-                  className="w-[200%] h-full flex opacity-60 bg-gradient-to-r from-red-600 via-red-400 to-red-600"
-                  style={{ 
-                    animation: `moveBlood ${1 / velocityMultiplier}s linear infinite` 
-                  }}
-                ></div>
-             </div>
-          </div>
-        </div>
-
-        {stenosis > 70 && (
-          <div className="absolute bottom-4 right-4 bg-red-500/90 text-white px-3 py-2 rounded-lg text-sm font-bold flex items-center gap-2 animate-pulse z-20 shadow-lg">
-            ¡Estenosis Crítica! Riesgo de caída de flujo.
-          </div>
-        )}
-
-        <style>{`
-          @keyframes moveBlood {
-            0% { transform: translateX(0); }
-            100% { transform: translateX(-50%); }
-          }
-        `}</style>
-      </div>
-    </div>
-  );
-};
-
-// 3. Simulación de Flujo Laminar vs Turbulento (Reynolds)
-const TurbulenceSimulation = () => {
-  const [velocity, setVelocity] = useState(50); // cm/s
-  const [diameter, setDiameter] = useState(2); // cm
-  
-  // Cálculo simplificado del número de Reynolds: Re = (densidad * diametro * velocidad) / viscosidad
-  // Asumimos densidad y viscosidad constantes típicas de la sangre
-  const viscosity = 0.035; // poise aprox
-  const density = 1.06; // g/cm3
-  const reynolds = Math.round((density * diameter * velocity) / viscosity);
-
-  const isTurbulent = reynolds > 2000;
-
-  return (
-    <div className="flex flex-col lg:flex-row gap-6">
-      <div className="flex-1 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-        <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
-          <Activity className={isTurbulent ? "text-orange-500" : "text-green-500"} /> 
-          3. Turbulencia y Número de Reynolds
-        </h3>
-        <p className="text-slate-600 mb-4 text-sm">
-          Normalmente la sangre viaja en "capas" ordenadas (<strong>Flujo Laminar</strong>). Pero si la velocidad aumenta mucho o la arteria es muy ancha, el flujo se desordena y forma remolinos (<strong>Flujo Turbulento</strong>).
-        </p>
-        <div className="bg-slate-100 p-3 rounded text-xs text-slate-600 mb-6 italic">
-          El <strong>Número de Reynolds</strong> predice esto. Si supera los 2000, el flujo empieza a ser turbulento, perdiendo mucha energía en forma de calor y ruido (soplos).
-        </div>
-
-        <div className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Velocidad de la sangre: {velocity} cm/s
-            </label>
-            <input
-              type="range" min="10" max="150" value={velocity}
-              onChange={(e) => setVelocity(parseInt(e.target.value))}
-              className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-teal-600"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Diámetro del vaso: {diameter.toFixed(1)} cm
-            </label>
-            <input
-              type="range" min="0.5" max="4" step="0.1" value={diameter}
-              onChange={(e) => setDiameter(parseFloat(e.target.value))}
-              className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-teal-600"
-            />
-          </div>
-        </div>
-
-        <div className={`mt-8 p-4 rounded-xl border-2 transition-colors duration-300 text-center ${isTurbulent ? 'bg-orange-50 border-orange-300 text-orange-800' : 'bg-green-50 border-green-300 text-green-800'}`}>
-          <div className="text-sm font-bold opacity-80 mb-1">NÚMERO DE REYNOLDS</div>
-          <div className="text-4xl font-black mb-2">{reynolds.toLocaleString()}</div>
-          <div className="font-semibold uppercase tracking-wider text-sm">
-            {isTurbulent ? '🚨 Flujo Turbulento (Caos)' : '✅ Flujo Laminar (Ordenado)'}
-          </div>
-        </div>
-      </div>
-
-      <div className="flex-1 bg-slate-800 rounded-xl overflow-hidden relative min-h-[300px] shadow-inner flex flex-col items-center justify-center p-4">
-        <span className="absolute top-2 left-2 text-xs font-bold text-slate-400 z-10">SIMULACIÓN DE FLUIDO</span>
-        
-        <div 
-          className="relative w-full border-y-4 border-slate-600 flex flex-col justify-center items-center py-4 overflow-hidden"
-          style={{ height: `${diameter * 60}px` }}
-        >
-          {/* Animación del fluido */}
-          {Array.from({ length: 15 }).map((_, i) => {
-            // Calculamos la posición y en base al perfil parabólico si es laminar
-            const distanceFromCenter = Math.abs((i - 7) / 7); // 0 en el centro, 1 en los bordes
-            // El centro va más rápido en flujo laminar
-            const laminarSpeed = 1 - Math.pow(distanceFromCenter, 2); 
-            
-            // Si es turbulento, usamos valores aleatorios (caos)
-            const animationDuration = isTurbulent 
-              ? (Math.random() * 1 + 0.2) * (150 / velocity) // Caos
-              : (1.5 / Math.max(0.1, laminarSpeed)) * (50 / velocity); // Parabólico ordenado
-
-            const delay = Math.random() * -5;
-            const yOffset = isTurbulent ? (Math.random() * 40 - 20) : 0;
-
-            return (
-              <div 
-                key={i}
-                className={`absolute h-2 rounded-full ${isTurbulent ? 'w-4 bg-orange-400' : 'w-12 bg-blue-400'} opacity-70`}
-                style={{
-                  top: `${(i / 14) * 100}%`,
-                  transform: `translateY(${yOffset}px)`,
-                  animation: `streamline ${animationDuration}s linear infinite`,
-                  animationDelay: `${delay}s`,
-                  left: '-10%'
-                }}
-              ></div>
-            );
-          })}
-        </div>
-
-        <style>{`
-          @keyframes streamline {
-            0% { left: -10%; transform: rotate(0deg); }
-            50% { transform: ${isTurbulent ? 'rotate(180deg) scale(1.5)' : 'rotate(0deg) scale(1)'}; }
-            100% { left: 110%; transform: ${isTurbulent ? 'rotate(360deg)' : 'rotate(0deg)'}; }
-          }
-        `}</style>
-      </div>
-    </div>
-  );
-};
-
-// 4. Minijuego 2D: Salto Arterial tipo Mario Bros (Estenosis y Continuidad)
-const StenosisRunnerGame = () => {
-  const canvasRef = useRef(null);
-  const [gameState, setGameState] = useState({
-    isPlaying: false,
-    isGameOver: false,
-    score: 0,
-    velocityMultiplier: 1.0,
-    currentStenosis: 0
-  });
-
-  const gameRef = useRef({
-    isPlaying: false,
-    isGameOver: false,
-    score: 0,
-    velocityMultiplier: 1.0,
-    currentStenosis: 0
-  });
-
-  const startGame = () => {
-    setGameState({ isPlaying: true, isGameOver: false, score: 0, velocityMultiplier: 1.0, currentStenosis: 0 });
-    gameRef.current = { isPlaying: true, isGameOver: false, score: 0, velocityMultiplier: 1.0, currentStenosis: 0 };
-  };
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    let animationId;
-
-    // Configuración interna del juego
-    const GAME_WIDTH = 800;
-    const GAME_HEIGHT = 400;
-    canvas.width = GAME_WIDTH;
-    canvas.height = GAME_HEIGHT;
-
-    // Entidades del juego
-    const player = {
-      x: 100,
-      y: GAME_HEIGHT - 40,
-      radius: 15,
-      vy: 0,
-      gravity: 0.6,   // <-- Gravedad reducida (antes 0.8) para flotar más en el plasma
-      jumpPower: -22, // <-- Potencia aumentada (antes -18) para saltar mucho más alto
-      isGrounded: true
-    };
-
-    let obstacles = [];
-    let particles = Array.from({ length: 40 }, () => ({
-      x: Math.random() * GAME_WIDTH,
-      y: Math.random() * GAME_HEIGHT,
-      speed: Math.random() * 2 + 1,
-      size: Math.random() * 3 + 1
-    }));
-
-    let frameCount = 0;
-    const baseScrollSpeed = 5;
-
-    // Controles (Salto)
-    const jump = () => {
-      if (gameRef.current.isPlaying && player.isGrounded) {
-        player.vy = player.jumpPower;
-        player.isGrounded = false;
-      }
-    };
-
-    const handleKeyDown = (e) => {
-      if (e.code === 'Space' || e.code === 'ArrowUp') {
-        e.preventDefault();
-        jump();
-      }
-    };
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador de Protección Radiológica</title>
+    <!-- Tailwind CSS para el diseño -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js para los gráficos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- FontAwesome para íconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    const handleKeyUp = (e) => {
-      if (e.code === 'Space' || e.code === 'ArrowUp') {
-        e.preventDefault();
-        // Lógica de salto variable: si soltamos el botón mientras sube, cortamos el impulso
-        if (player.vy < 0) {
-          player.vy *= 0.4; // Reduce la velocidad de subida drásticamente al soltar
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#2563eb',
+                        secondary: '#475569',
+                        danger: '#ef4444',
+                        safe: '#10b981',
+                        warning: '#f59e0b'
+                    }
+                }
+            }
         }
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-
-    // Bucle principal del juego
-    const update = () => {
-      if (!gameRef.current.isPlaying) {
-        animationId = requestAnimationFrame(update);
-        return;
-      }
-
-      frameCount++;
-      ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-
-      // 1. Lógica de Estenosis y Velocidad (Ecuación de Continuidad)
-      // Buscar el obstáculo más cercano al jugador para calcular la estenosis actual
-      let activeStenosis = 0;
-      obstacles.forEach(obs => {
-        // Si el jugador está pasando por encima o cerca del obstáculo
-        if (obs.x < player.x + 100 && obs.x + obs.width > player.x - 50) {
-          const stenosisPercentage = obs.height / GAME_HEIGHT;
-          if (stenosisPercentage > activeStenosis) {
-            activeStenosis = stenosisPercentage;
-          }
+    </script>
+    <style>
+        /* Estilos personalizados adicionales */
+        .tab-btn { transition: all 0.3s ease; }
+        .tab-btn.active { 
+            border-bottom: 3px solid #2563eb; 
+            color: #2563eb; 
+            font-weight: 600; 
         }
-      });
+        .tab-content { display: none; animation: fadeIn 0.4s; }
+        .tab-content.active { display: block; }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 24px;
+            width: 24px;
+            border-radius: 50%;
+            background: #2563eb;
+            cursor: pointer;
+            margin-top: -8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 8px;
+            cursor: pointer;
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        
+        .progress-bar { transition: width 0.5s ease-in-out; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen font-sans">
 
-      // Transición suave de la estenosis para evitar tirones de cámara
-      gameRef.current.currentStenosis += (activeStenosis - gameRef.current.currentStenosis) * 0.1;
-      
-      // V2 = V1 * (A1/A2). Si A2 se reduce, la velocidad aumenta.
-      const areaRatio = 1 / Math.max(0.2, (1 - gameRef.current.currentStenosis));
-      gameRef.current.velocityMultiplier = areaRatio;
-      
-      const currentScrollSpeed = baseScrollSpeed * gameRef.current.velocityMultiplier;
+    <!-- Encabezado -->
+    <header class="bg-white shadow-sm pt-8 pb-6 px-4 mb-6">
+        <div class="max-w-6xl mx-auto text-center">
+            <h1 class="text-3xl md:text-4xl font-bold text-slate-800 mb-3">
+                <i class="fa-solid fa-radiation text-amber-500 mr-2"></i>
+                Simulador de Protección Radiológica
+            </h1>
+            <p class="text-slate-500 text-lg">Explora los principios fundamentales: Tiempo, Distancia y Blindaje (ALARA)</p>
+        </div>
+    </header>
 
-      // Actualizar puntuación basada en la distancia (velocidad)
-      gameRef.current.score += (currentScrollSpeed / 10);
+    <main class="max-w-6xl mx-auto px-4 pb-12">
+        
+        <!-- Navegación de Pestañas -->
+        <div class="flex justify-center mb-8 border-b border-slate-200">
+            <button class="tab-btn active px-6 py-3 text-lg text-slate-500 hover:text-primary mx-2 focus:outline-none" onclick="openTab('modulo-distancia', this)">
+                <i class="fa-solid fa-ruler-horizontal mr-2"></i> 1. Distancia
+            </button>
+            <button class="tab-btn px-6 py-3 text-lg text-slate-500 hover:text-primary mx-2 focus:outline-none" onclick="openTab('modulo-dosis', this)">
+                <i class="fa-solid fa-calculator mr-2"></i> 2. Dosis y Riesgo
+            </button>
+            <button class="tab-btn px-6 py-3 text-lg text-slate-500 hover:text-primary mx-2 focus:outline-none" onclick="openTab('modulo-blindaje', this)">
+                <i class="fa-solid fa-shield-halved mr-2"></i> 3. Blindaje
+            </button>
+        </div>
 
-      // 2. Generar nuevos obstáculos (Placas de ateroma)
-      if (frameCount % Math.max(40, Math.floor(120 / gameRef.current.velocityMultiplier)) === 0) {
-        // Generar una placa con altura aleatoria (Estenosis del 20% al 60%)
-        const height = GAME_HEIGHT * (Math.random() * 0.4 + 0.2); 
-        obstacles.push({
-          x: GAME_WIDTH,
-          y: GAME_HEIGHT - height,
-          width: (80 + Math.random() * 60) * 2, // <-- Multiplicado por 2 para que sean el doble de anchas
-          height: height,
-          passed: false
+        <!-- MÓDULO 1: DISTANCIA -->
+        <div id="modulo-distancia" class="tab-content active bg-white rounded-xl shadow-md p-6 md:p-8">
+            <div class="mb-6">
+                <h2 class="text-2xl font-bold text-slate-800 mb-2">Ley de la Inversa del Cuadrado</h2>
+                <p class="text-slate-600">Al alejarte de la fuente emisora (o del paciente que dispersa la radiación), la dosis cae de forma cuadrática ($1/d^2$). Mueve el control para ver el efecto.</p>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Controles -->
+                <div class="bg-slate-50 p-6 rounded-lg border border-slate-200 flex flex-col justify-center">
+                    <label class="block text-lg font-medium text-slate-700 mb-4">
+                        Tu distancia al tubo: <span id="distVal" class="font-bold text-primary text-xl">1.0</span> metros
+                    </label>
+                    <input type="range" id="distSlider" min="0.5" max="5.0" step="0.1" value="1.0" class="w-full mb-8">
+                    
+                    <div class="text-center p-4 bg-white rounded-lg shadow-sm border border-slate-100 mb-6">
+                        <span class="block text-sm text-slate-500 uppercase tracking-wide">Dosis Relativa Recibida</span>
+                        <span id="doseVal" class="text-5xl font-bold text-danger my-2 block">100%</span>
+                        <span class="text-xs text-slate-400">Referencia: 100% a 1 metro</span>
+                    </div>
+
+                    <div id="distAlert" class="p-4 rounded-md text-center font-medium">
+                        <!-- El mensaje de alerta se inserta por JS -->
+                    </div>
+                </div>
+                
+                <!-- Gráfico -->
+                <div class="lg:col-span-2 relative h-[400px] bg-white border border-slate-100 rounded-lg p-4 shadow-sm">
+                    <canvas id="inverseSquareChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- MÓDULO 2: DOSIS Y RIESGO -->
+        <div id="modulo-dosis" class="tab-content bg-white rounded-xl shadow-md p-6 md:p-8">
+            <div class="mb-6">
+                <h2 class="text-2xl font-bold text-slate-800 mb-2">Traductor de Dosis Efectiva (mSv)</h2>
+                <p class="text-slate-600">Simula los exámenes solicitados a un paciente y traduce la radiación médica a métricas fáciles de comprender para concientizar sobre el principio ALARA.</p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Panel de Selección -->
+                <div>
+                    <div class="bg-slate-50 p-6 rounded-lg border border-slate-200">
+                        <h3 class="text-lg font-semibold mb-4 text-slate-700">Añadir Exámenes al Paciente</h3>
+                        <div class="flex gap-2 mb-4">
+                            <select id="examSelect" class="flex-1 bg-white border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-primary focus:border-primary block p-2.5">
+                                <option value="0.005">Rx Dental (0.005 mSv)</option>
+                                <option value="0.02">Rx Extremidades (0.02 mSv)</option>
+                                <option value="0.1" selected>Rx Tórax PA (0.1 mSv)</option>
+                                <option value="0.4">Mamografía (0.4 mSv)</option>
+                                <option value="1.5">Rx Columna Lumbar (1.5 mSv)</option>
+                                <option value="2.0">TC de Cráneo (2.0 mSv)</option>
+                                <option value="7.0">TC de Tórax (7.0 mSv)</option>
+                                <option value="10.0">TC Abdomen y Pelvis (10.0 mSv)</option>
+                                <option value="14.0">PET/CT (14.0 mSv)</option>
+                                <option value="15.0">Angiografía Abdominal (15.0 mSv)</option>
+                            </select>
+                            <button onclick="addExam()" class="bg-primary hover:bg-blue-700 text-white font-medium rounded-lg text-sm px-5 py-2.5 focus:outline-none transition-colors">
+                                <i class="fa-solid fa-plus"></i>
+                            </button>
+                        </div>
+
+                        <div class="mt-6">
+                            <h4 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Historial del Paciente</h4>
+                            <ul id="examList" class="space-y-2 max-h-48 overflow-y-auto pr-2">
+                                <!-- Lista de exámenes inyectada por JS -->
+                                <li class="text-sm text-slate-400 italic" id="emptyListMsg">No hay exámenes seleccionados.</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="mt-4 pt-4 border-t border-slate-200 flex justify-between items-center">
+                            <button onclick="clearExams()" class="text-danger hover:text-red-700 text-sm font-medium">
+                                <i class="fa-solid fa-trash mr-1"></i> Limpiar
+                            </button>
+                            <div class="text-right">
+                                <span class="text-sm text-slate-500 block">Dosis Total Acumulada</span>
+                                <span id="totalDose" class="text-3xl font-bold text-slate-800">0.00</span> <span class="font-medium text-slate-500">mSv</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Panel de Equivalencias -->
+                <div class="flex flex-col justify-center space-y-4">
+                    <h3 class="text-lg font-semibold text-slate-700 mb-2">Esto equivale aproximadamente a:</h3>
+                    
+                    <!-- Tarjeta 1: Radiación natural -->
+                    <div class="bg-white border-l-4 border-amber-500 shadow-sm p-4 rounded-r-lg flex items-center">
+                        <div class="bg-amber-100 p-3 rounded-full mr-4 text-amber-600">
+                            <i class="fa-solid fa-sun text-xl"></i>
+                        </div>
+                        <div>
+                            <span id="eqDays" class="text-2xl font-bold text-slate-800">0</span> <span class="text-slate-600 font-medium">Días</span>
+                            <p class="text-sm text-slate-500">de radiación natural de fondo.</p>
+                        </div>
+                    </div>
+
+                    <!-- Tarjeta 2: Vuelos -->
+                    <div class="bg-white border-l-4 border-sky-500 shadow-sm p-4 rounded-r-lg flex items-center">
+                        <div class="bg-sky-100 p-3 rounded-full mr-4 text-sky-600">
+                            <i class="fa-solid fa-plane text-xl"></i>
+                        </div>
+                        <div>
+                            <span id="eqFlights" class="text-2xl font-bold text-slate-800">0</span> <span class="text-slate-600 font-medium">Vuelos</span>
+                            <p class="text-sm text-slate-500">transatlánticos (ej. Santiago a Madrid).</p>
+                        </div>
+                    </div>
+
+                    <!-- Tarjeta 3: Rx Tórax -->
+                    <div class="bg-white border-l-4 border-emerald-500 shadow-sm p-4 rounded-r-lg flex items-center">
+                        <div class="bg-emerald-100 p-3 rounded-full mr-4 text-emerald-600">
+                            <i class="fa-solid fa-x-ray text-xl"></i>
+                        </div>
+                        <div>
+                            <span id="eqRx" class="text-2xl font-bold text-slate-800">0</span> <span class="text-slate-600 font-medium">Rx de Tórax</span>
+                            <p class="text-sm text-slate-500">simples equivalentes.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MÓDULO 3: BLINDAJE -->
+        <div id="modulo-blindaje" class="tab-content bg-white rounded-xl shadow-md p-6 md:p-8">
+            <div class="mb-6">
+                <h2 class="text-2xl font-bold text-slate-800 mb-2">Atenuación por Elementos de Protección</h2>
+                <p class="text-slate-600">El grosor del delantal plomado (mm Pb) y la energía del haz de rayos X (kVp) determinan qué porcentaje de la radiación dispersa llega a tu cuerpo.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
+                <!-- Controles de Blindaje -->
+                <div class="bg-slate-50 p-6 rounded-lg border border-slate-200">
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-slate-700 mb-2">Grosor del Delantal Plomado (mm Pb):</label>
+                        <div class="flex gap-4">
+                            <label class="flex items-center cursor-pointer">
+                                <input type="radio" name="pbThickness" value="0.25" class="w-4 h-4 text-primary bg-gray-100 border-gray-300 focus:ring-primary" onchange="updateShielding()">
+                                <span class="ml-2 text-sm font-medium text-gray-900">0.25 mm</span>
+                            </label>
+                            <label class="flex items-center cursor-pointer">
+                                <input type="radio" name="pbThickness" value="0.35" class="w-4 h-4 text-primary bg-gray-100 border-gray-300 focus:ring-primary" onchange="updateShielding()">
+                                <span class="ml-2 text-sm font-medium text-gray-900">0.35 mm</span>
+                            </label>
+                            <label class="flex items-center cursor-pointer">
+                                <input type="radio" name="pbThickness" value="0.50" class="w-4 h-4 text-primary bg-gray-100 border-gray-300 focus:ring-primary" checked onchange="updateShielding()">
+                                <span class="ml-2 text-sm font-medium text-gray-900">0.50 mm</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-2">Energía del Equipo (Kilovoltaje - kVp):</label>
+                        <input type="range" id="kvpSlider" min="60" max="120" step="10" value="100" class="w-full" oninput="updateShielding()">
+                        <div class="flex justify-between text-xs text-slate-500 mt-1">
+                            <span>60 kVp (Pediátrico/Extremidad)</span>
+                            <span id="kvpDisplay" class="font-bold text-primary text-base">100 kVp</span>
+                            <span>120 kVp (Abdomen grueso/TC)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Visualización de Atenuación -->
+                <div class="text-center">
+                    <div class="relative w-48 h-48 mx-auto mb-4">
+                        <!-- Círculo de porcentaje -->
+                        <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                            <path class="text-slate-200" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3" />
+                            <path id="shieldCircle" class="text-primary progress-bar" stroke-dasharray="90, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3" />
+                        </svg>
+                        <div class="absolute inset-0 flex flex-col items-center justify-center">
+                            <span id="attenuationValue" class="text-4xl font-bold text-slate-800">95%</span>
+                            <span class="text-xs text-slate-500 uppercase">Atenuación</span>
+                        </div>
+                    </div>
+                    
+                    <p class="text-slate-600 mb-2">El delantal bloquea el <span id="attText" class="font-bold text-slate-800">95%</span> de la radiación dispersa.</p>
+                    <div class="bg-red-50 text-red-700 text-sm p-3 rounded-md border border-red-100 inline-block">
+                        <i class="fa-solid fa-triangle-exclamation mr-1"></i>
+                        Peligro: El <span id="transText" class="font-bold">5%</span> atraviesa y llega a tu cuerpo.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // --- NAVEGACIÓN DE PESTAÑAS ---
+        function openTab(tabId, btnElement) {
+            // Ocultar todos los contenidos
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            // Quitar clase active de todos los botones
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            
+            // Mostrar contenido actual y marcar botón
+            document.getElementById(tabId).classList.add('active');
+            btnElement.classList.add('active');
+        }
+
+        // --- MÓDULO 1: DISTANCIA ---
+        let inverseSquareChart;
+        const doseReference = 100; // 100% a 1 metro
+        const distances = [];
+        for (let d = 0.5; d <= 5.0; d += 0.1) distances.push(d.toFixed(1));
+
+        function initDistModule() {
+            const ctx = document.getElementById('inverseSquareChart').getContext('2d');
+            
+            // Dosis teórica
+            const doses = distances.map(d => (doseReference / Math.pow(d, 2)).toFixed(1));
+
+            inverseSquareChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: distances,
+                    datasets: [
+                        {
+                            label: 'Curva de Dosis Teórica',
+                            data: doses,
+                            borderColor: '#cbd5e1',
+                            backgroundColor: 'rgba(241, 245, 249, 0.5)',
+                            borderWidth: 2,
+                            fill: true,
+                            pointRadius: 0,
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Tu Posición',
+                            data: Array(distances.length).fill(null),
+                            backgroundColor: '#ef4444',
+                            borderColor: '#b91c1c',
+                            pointRadius: 8,
+                            pointHoverRadius: 10,
+                            showLine: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { title: { display: true, text: 'Distancia (metros)', color: '#64748b' } },
+                        y: { 
+                            title: { display: true, text: 'Dosis Relativa (%)', color: '#64748b' },
+                            min: 0, max: 400 
+                        }
+                    },
+                    plugins: { legend: { display: false } },
+                    animation: { duration: 100 }
+                }
+            });
+
+            document.getElementById('distSlider').addEventListener('input', updateDistUI);
+            updateDistUI(); // Llamada inicial
+        }
+
+        function updateDistUI() {
+            const currentDist = parseFloat(document.getElementById('distSlider').value);
+            const currentDose = doseReference / Math.pow(currentDist, 2);
+            
+            document.getElementById('distVal').innerText = currentDist.toFixed(1);
+            document.getElementById('doseVal').innerText = currentDose.toFixed(1) + '%';
+            
+            // Actualizar alertas y colores
+            const alertBox = document.getElementById('distAlert');
+            const doseValEl = document.getElementById('doseVal');
+            
+            if (currentDist < 1.0) {
+                alertBox.className = 'p-4 rounded-md text-center font-medium bg-red-100 text-red-700 border border-red-200';
+                alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation mr-1"></i> Peligro: Estás muy cerca de la fuente de dispersión.';
+                doseValEl.className = 'text-5xl font-bold my-2 block text-red-600';
+            } else if (currentDist >= 2.0) {
+                alertBox.className = 'p-4 rounded-md text-center font-medium bg-emerald-100 text-emerald-700 border border-emerald-200';
+                alertBox.innerHTML = '<i class="fa-solid fa-shield-check mr-1"></i> Zona segura: Distancia protectora óptima.';
+                doseValEl.className = 'text-5xl font-bold my-2 block text-emerald-600';
+            } else {
+                alertBox.className = 'p-4 rounded-md text-center font-medium bg-amber-100 text-amber-700 border border-amber-200';
+                alertBox.innerHTML = '<i class="fa-solid fa-circle-exclamation mr-1"></i> Precaución: Aléjate más si las condiciones clínicas lo permiten.';
+                doseValEl.className = 'text-5xl font-bold my-2 block text-amber-600';
+            }
+
+            // Actualizar gráfico
+            const dataIndex = distances.indexOf(currentDist.toFixed(1));
+            const pointData = Array(distances.length).fill(null);
+            if (dataIndex !== -1) pointData[dataIndex] = currentDose.toFixed(1);
+            
+            inverseSquareChart.data.datasets[1].data = pointData;
+            // Cambiar color del punto según riesgo
+            inverseSquareChart.data.datasets[1].backgroundColor = currentDist < 1.0 ? '#ef4444' : (currentDist >= 2.0 ? '#10b981' : '#f59e0b');
+            inverseSquareChart.update();
+        }
+
+
+        // --- MÓDULO 2: DOSIS Y RIESGO ---
+        let patientExams = [];
+        
+        // Constantes de radiación para equivalencias
+        const BG_RADIATION_PER_DAY = 3.0 / 365; // ~0.0082 mSv diarios en promedio global
+        const FLIGHT_SCL_MAD = 0.08; // ~0.08 mSv por vuelo largo
+        const RX_TORAX = 0.1; // mSv
+
+        function addExam() {
+            const select = document.getElementById('examSelect');
+            const examName = select.options[select.selectedIndex].text;
+            const dose = parseFloat(select.value);
+            
+            patientExams.push({ name: examName, dose: dose });
+            renderExamList();
+        }
+
+        function clearExams() {
+            patientExams = [];
+            renderExamList();
+        }
+
+        function renderExamList() {
+            const listEl = document.getElementById('examList');
+            const emptyMsg = document.getElementById('emptyListMsg');
+            let total = 0;
+            
+            listEl.innerHTML = '';
+            
+            if (patientExams.length === 0) {
+                listEl.innerHTML = '<li class="text-sm text-slate-400 italic" id="emptyListMsg">No hay exámenes seleccionados.</li>';
+            } else {
+                patientExams.forEach((exam, index) => {
+                    total += exam.dose;
+                    const li = document.createElement('li');
+                    li.className = 'flex justify-between items-center p-2 bg-white border border-slate-100 rounded shadow-sm text-sm';
+                    li.innerHTML = `
+                        <span class="text-slate-700 font-medium">${exam.name}</span>
+                        <button onclick="removeExam(${index})" class="text-slate-400 hover:text-danger"><i class="fa-solid fa-xmark"></i></button>
+                    `;
+                    listEl.appendChild(li);
+                });
+            }
+
+            // Actualizar Total
+            document.getElementById('totalDose').innerText = total.toFixed(2);
+            
+            // Actualizar Equivalencias
+            document.getElementById('eqDays').innerText = Math.round(total / BG_RADIATION_PER_DAY).toLocaleString('es-ES');
+            document.getElementById('eqFlights').innerText = Math.round(total / FLIGHT_SCL_MAD).toLocaleString('es-ES');
+            document.getElementById('eqRx').innerText = Math.round(total / RX_TORAX).toLocaleString('es-ES');
+        }
+
+        function removeExam(index) {
+            patientExams.splice(index, 1);
+            renderExamList();
+        }
+
+
+        // --- MÓDULO 3: BLINDAJE ---
+        // Matriz simplificada de atenuación: [kVp][grosor_Pb]
+        const attenuationData = {
+            "60": { "0.25": 99.0, "0.35": 99.5, "0.50": 99.9 },
+            "70": { "0.25": 98.0, "0.35": 99.0, "0.50": 99.5 },
+            "80": { "0.25": 96.0, "0.35": 98.0, "0.50": 99.0 },
+            "90": { "0.25": 93.0, "0.35": 96.0, "0.50": 98.0 },
+            "100": { "0.25": 89.0, "0.35": 94.0, "0.50": 97.0 },
+            "110": { "0.25": 86.0, "0.35": 91.0, "0.50": 95.0 },
+            "120": { "0.25": 83.0, "0.35": 89.0, "0.50": 94.0 }
+        };
+
+        function updateShielding() {
+            // Obtener valores
+            const kvp = document.getElementById('kvpSlider').value;
+            const pbThickness = document.querySelector('input[name="pbThickness"]:checked').value;
+            
+            // Actualizar texto kVp
+            document.getElementById('kvpDisplay').innerText = kvp + ' kVp';
+            
+            // Obtener atenuación de la matriz (o aproximar)
+            let attPercentage = attenuationData[kvp][pbThickness];
+            
+            // Actualizar UI
+            document.getElementById('attenuationValue').innerText = attPercentage.toFixed(1) + '%';
+            document.getElementById('attText').innerText = attPercentage.toFixed(1) + '%';
+            document.getElementById('transText').innerText = (100 - attPercentage).toFixed(1) + '%';
+            
+            // Animar círculo SVG
+            const circle = document.getElementById('shieldCircle');
+            circle.setAttribute('stroke-dasharray', `${attPercentage}, 100`);
+            
+            // Cambiar color sutilmente según la protección
+            if(attPercentage < 90) {
+                circle.classList.remove('text-primary', 'text-emerald-500');
+                circle.classList.add('text-amber-500');
+            } else {
+                circle.classList.remove('text-amber-500', 'text-emerald-500');
+                circle.classList.add('text-primary');
+            }
+        }
+
+        // Inicializar todo cuando el DOM esté listo
+        window.addEventListener('DOMContentLoaded', () => {
+            initDistModule();
+            updateShielding(); // Inicializar el módulo 3
         });
-      }
 
-      // 3. Dibujar fondo y partículas de sangre
-      ctx.fillStyle = '#450a0a'; // Fondo rojo muy oscuro
-      ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-
-      ctx.fillStyle = '#ef4444'; // Color de partículas (glóbulos de fondo)
-      particles.forEach(p => {
-        p.x -= p.speed * gameRef.current.velocityMultiplier;
-        if (p.x < 0) {
-          p.x = GAME_WIDTH;
-          p.y = Math.random() * GAME_HEIGHT;
-        }
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        ctx.fill();
-      });
-
-      // 4. Dibujar pared del vaso (suelo)
-      ctx.fillStyle = '#7f1d1d';
-      ctx.fillRect(0, GAME_HEIGHT - 10, GAME_WIDTH, 10);
-
-      // 5. Actualizar y dibujar obstáculos
-      ctx.fillStyle = '#eab308'; // Color amarillo de placa de colesterol
-      for (let i = obstacles.length - 1; i >= 0; i--) {
-        let obs = obstacles[i];
-        obs.x -= currentScrollSpeed;
-
-        // Dibujar placa (con bordes redondeados simulados)
-        ctx.beginPath();
-        ctx.moveTo(obs.x, GAME_HEIGHT);
-        ctx.quadraticCurveTo(obs.x, obs.y, obs.x + 20, obs.y);
-        ctx.lineTo(obs.x + obs.width - 20, obs.y);
-        ctx.quadraticCurveTo(obs.x + obs.width, obs.y, obs.x + obs.width, GAME_HEIGHT);
-        ctx.fill();
-
-        // Eliminar si sale de la pantalla
-        if (obs.x + obs.width < 0) {
-          obstacles.splice(i, 1);
-        }
-
-        // Detección de Colisión (Hitbox rectangular simple)
-        // Damos un pequeño margen (hitbox más pequeña que el dibujo) para que sea justo
-        const hitboxMargin = 5;
-        if (
-          player.x + player.radius - hitboxMargin > obs.x &&
-          player.x - player.radius + hitboxMargin < obs.x + obs.width &&
-          player.y + player.radius - hitboxMargin > obs.y
-        ) {
-          // Si el jugador cae justo encima de la placa, puede correr sobre ella
-          if (player.vy >= 0 && player.y < obs.y + 15) {
-            player.y = obs.y - player.radius;
-            player.vy = 0;
-            player.isGrounded = true;
-          } else {
-            // Chocó de frente o por debajo -> Game Over
-            gameRef.current.isGameOver = true;
-            gameRef.current.isPlaying = false;
-          }
-        }
-      }
-
-      // 6. Física del Jugador
-      player.vy += player.gravity;
-      player.y += player.vy;
-
-      // Colisión con el suelo base
-      if (player.y >= GAME_HEIGHT - 10 - player.radius) {
-        player.y = GAME_HEIGHT - 10 - player.radius;
-        player.vy = 0;
-        player.isGrounded = true;
-      }
-
-      // 7. Dibujar Jugador
-      ctx.fillStyle = '#f87171'; // Rojo brillante
-      ctx.beginPath();
-      ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
-      ctx.fill();
-      // Dibujar un pequeño "brillo" para darle volumen
-      ctx.fillStyle = '#fca5a5';
-      ctx.beginPath();
-      ctx.arc(player.x - 6, player.y - 6, player.radius / 4, 0, Math.PI * 2);
-      ctx.fill();
-
-      // --- DIBUJAR CARA DEL GLÓBULO ROJO ---
-      const isScared = gameRef.current.velocityMultiplier > 1.3;
-      
-      if (isScared) {
-        // Cara de MIEDO (Aceleración por estenosis)
-        // Ojos muy abiertos (esclerótica blanca)
-        ctx.fillStyle = 'white';
-        ctx.beginPath(); ctx.arc(player.x - 3, player.y - 3, 4.5, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(player.x + 7, player.y - 3, 4.5, 0, Math.PI * 2); ctx.fill();
-        
-        // Pupilas contraídas
-        ctx.fillStyle = '#450a0a';
-        ctx.beginPath(); ctx.arc(player.x - 3, player.y - 3, 1.5, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(player.x + 7, player.y - 3, 1.5, 0, Math.PI * 2); ctx.fill();
-
-        // Boca abierta en forma de 'O'
-        ctx.beginPath();
-        ctx.ellipse(player.x + 2, player.y + 6, 3, 4, 0, 0, Math.PI * 2);
-        ctx.fill();
-      } else {
-        // Cara FELIZ (Flujo normal)
-        // Ojos normales
-        ctx.fillStyle = '#450a0a';
-        ctx.beginPath(); ctx.arc(player.x - 2, player.y - 2, 2, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(player.x + 6, player.y - 2, 2, 0, Math.PI * 2); ctx.fill();
-
-        // Sonrisa
-        ctx.strokeStyle = '#450a0a';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(player.x + 2, player.y + 2, 5, 0.1, Math.PI - 0.1, false);
-        ctx.stroke();
-      }
-
-      // Sincronizar UI (cada 10 frames para no ahogar a React)
-      if (frameCount % 10 === 0) {
-        setGameState(prev => ({
-          ...prev,
-          score: Math.floor(gameRef.current.score),
-          velocityMultiplier: gameRef.current.velocityMultiplier,
-          currentStenosis: gameRef.current.currentStenosis,
-          isGameOver: gameRef.current.isGameOver,
-          isPlaying: gameRef.current.isPlaying
-        }));
-      }
-
-      animationId = requestAnimationFrame(update);
-    };
-
-    update();
-
-    return () => {
-      cancelAnimationFrame(animationId);
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
-    };
-  }, []);
-
-  return (
-    <div className="bg-slate-900 p-4 md:p-6 rounded-xl border-2 border-red-500 shadow-xl text-white">
-      <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-        <h3 className="text-xl md:text-2xl font-black flex items-center gap-2 text-red-400">
-          <Gamepad2 size={28} /> Misión: Salto Arterial
-        </h3>
-        
-        <div className="flex gap-4">
-          <div className="bg-slate-800 px-4 py-2 rounded-lg border border-slate-700 flex items-center gap-2">
-            <Trophy className="text-yellow-400" size={20} />
-            <span className="font-bold text-xl">{gameState.score}</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="relative w-full overflow-hidden rounded-lg border-4 border-slate-800 bg-black aspect-[2/1] max-h-[400px]">
-        {/* Canvas del Juego */}
-        <canvas 
-          ref={canvasRef} 
-          className="w-full h-full block cursor-pointer"
-          style={{ touchAction: 'none' }}
-          onPointerDown={(e) => {
-            e.preventDefault();
-            if (gameState.isPlaying) {
-              const event = new KeyboardEvent('keydown', { 'code': 'Space' });
-              window.dispatchEvent(event);
-            }
-          }}
-          onPointerUp={(e) => {
-            e.preventDefault();
-            if (gameState.isPlaying) {
-              const event = new KeyboardEvent('keyup', { 'code': 'Space' });
-              window.dispatchEvent(event);
-            }
-          }}
-          onPointerOut={() => {
-            if (gameState.isPlaying) {
-              const event = new KeyboardEvent('keyup', { 'code': 'Space' });
-              window.dispatchEvent(event);
-            }
-          }}
-        />
-
-        {/* HUD en tiempo real superpuesto en el canvas */}
-        {gameState.isPlaying && (
-          <div className="absolute top-4 left-4 right-4 flex justify-between pointer-events-none">
-            <div className={`bg-slate-900/80 backdrop-blur px-3 py-2 rounded border transition-colors ${gameState.currentStenosis > 0.4 ? 'border-yellow-500 text-yellow-400' : 'border-slate-600 text-white'}`}>
-              <div className="text-[10px] font-bold uppercase tracking-wider opacity-70">Placa (Estenosis)</div>
-              <div className="text-lg font-black">{(gameState.currentStenosis * 100).toFixed(0)}%</div>
-            </div>
-            
-            <div className={`bg-slate-900/80 backdrop-blur px-3 py-2 rounded border text-right transition-colors ${gameState.velocityMultiplier > 1.5 ? 'border-red-500 text-red-400 animate-pulse' : 'border-slate-600 text-blue-300'}`}>
-              <div className="text-[10px] font-bold uppercase tracking-wider opacity-70">Velocidad Flujo</div>
-              <div className="text-lg font-black">{gameState.velocityMultiplier.toFixed(1)}x</div>
-            </div>
-          </div>
-        )}
-
-        {/* Pantalla de Inicio / Game Over */}
-        {(!gameState.isPlaying || gameState.isGameOver) && (
-          <div className="absolute inset-0 bg-slate-900/90 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center z-20">
-            {gameState.isGameOver && (
-              <div className="mb-4 text-red-500">
-                <AlertTriangle size={48} className="mx-auto mb-2" />
-                <h2 className="text-3xl font-black uppercase">¡Trombosis!</h2>
-                <p className="text-slate-300 mt-2">Puntuación final: {gameState.score}</p>
-              </div>
-            )}
-            
-            {!gameState.isGameOver && (
-              <Gamepad2 size={64} className="text-red-500 mb-4 opacity-50" />
-            )}
-
-            <p className="text-slate-300 max-w-md mb-8 text-sm md:text-base">
-              Controla al glóbulo rojo. <strong>Mantén presionado ESPACIO o la pantalla para saltar más alto</strong> y esquivar las placas de colesterol. 
-              <br/><br/>
-              <span className="text-yellow-400 font-bold">¡Cuidado!</span> Por la Ecuación de Continuidad, cuando te acerques a una estenosis (estrechamiento), el flujo sanguíneo <strong>acelerará drásticamente</strong>.
-            </p>
-
-            <button 
-              onClick={startGame}
-              className="bg-red-600 hover:bg-red-500 text-white px-8 py-3 rounded-full font-black text-lg flex items-center gap-2 transform transition hover:scale-105 shadow-lg shadow-red-900/50"
-            >
-              <Play size={24} fill="currentColor" /> 
-              {gameState.isGameOver ? 'REINTENTAR' : 'JUGAR AHORA'}
-            </button>
-          </div>
-        )}
-      </div>
-
-      <div className="mt-4 text-xs text-slate-400 text-center flex items-center justify-center gap-2">
-        <Info size={14} /> Observa cómo la velocidad de la pantalla (flujo) se multiplica al pasar sobre una placa.
-      </div>
-    </div>
-  );
-};
-
-// --- APLICACIÓN PRINCIPAL ---
-
-const App = () => {
-  const [activeTab, setActiveTab] = useState(1);
-
-  return (
-    <div className="min-h-screen bg-slate-100 text-slate-800 p-4 md:p-8 font-sans">
-      <div className="max-w-5xl mx-auto">
-        
-        {/* Encabezado */}
-        <header className="mb-8 text-center">
-          <h1 className="text-3xl md:text-4xl font-black text-slate-900 mb-4 tracking-tight">
-            Laboratorio Interactivo de <span className="text-red-600">Hemodinamia</span>
-          </h1>
-          <p className="text-slate-600 max-w-2xl mx-auto">
-            Descubre los conceptos físicos que rigen el movimiento de la sangre en el cuerpo humano sin necesidad de fórmulas complejas. Ajusta las variables y observa qué sucede.
-          </p>
-        </header>
-
-        {/* Navegación por Pestañas */}
-        <div className="flex justify-center mb-8">
-          <div className="inline-flex bg-slate-200 rounded-lg p-1 shadow-inner flex-wrap justify-center gap-1">
-            <button 
-              onClick={() => setActiveTab(1)}
-              className={`px-4 py-2 rounded-md text-sm font-semibold transition-all ${activeTab === 1 ? 'bg-white text-red-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
-            >
-              1. Radio y Resistencia
-            </button>
-            <button 
-              onClick={() => setActiveTab(2)}
-              className={`px-4 py-2 rounded-md text-sm font-semibold transition-all ${activeTab === 2 ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
-            >
-              2. Estenosis (Continuidad)
-            </button>
-            <button 
-              onClick={() => setActiveTab(3)}
-              className={`px-4 py-2 rounded-md text-sm font-semibold transition-all ${activeTab === 3 ? 'bg-white text-teal-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
-            >
-              3. Flujo y Turbulencia
-            </button>
-            <button 
-              onClick={() => setActiveTab(4)}
-              className={`px-4 py-2 rounded-md text-sm font-semibold transition-all ${activeTab === 4 ? 'bg-white text-red-600 shadow-sm ring-1 ring-red-200' : 'text-slate-600 hover:text-slate-900'}`}
-            >
-              <span className="flex items-center gap-1"><Gamepad2 size={16}/> 4. Minijuego: Salto</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Contenido Principal */}
-        <main className="transition-all duration-500">
-          {activeTab === 1 && <PoiseuilleSimulation />}
-          {activeTab === 2 && <ContinuitySimulation />}
-          {activeTab === 3 && <TurbulenceSimulation />}
-          {activeTab === 4 && <StenosisRunnerGame />}
-        </main>
-
-        {/* Tarjeta de Información General */}
-        <div className="mt-12 bg-blue-50 border border-blue-100 rounded-xl p-6 flex gap-4 text-blue-900">
-          <div className="flex-shrink-0 mt-1">
-            <Info className="text-blue-500" />
-          </div>
-          <div>
-            <h4 className="font-bold mb-2">Resumen para tu estudio:</h4>
-            <ul className="list-disc list-inside space-y-2 text-sm opacity-90">
-              <li><strong>Presión y Resistencia:</strong> La resistencia la dictan los vasos pequeños (arteriolas). El factor que más importa es el <strong>radio</strong>. Un mínimo espasmo reduce drásticamente el flujo.</li>
-              <li><strong>Placas de colesterol (Estenosis):</strong> Para mantener el flujo a través de un tubo tapado, la velocidad se dispara. Esto hace caer la presión interna (Efecto Bernoulli) y a veces la placa colapsa.</li>
-              <li><strong>Flujo Turbulento:</strong> Ocurre donde la velocidad es altísima o el tubo cambia de forma brusca (bifurcaciones). Esta turbulencia daña la pared interna (endotelio) y propicia la formación de trombos.</li>
-            </ul>
-          </div>
-        </div>
-
-      </div>
-    </div>
-  );
-};
-
-export default App;
+    </script>
+</body>
+</html>
